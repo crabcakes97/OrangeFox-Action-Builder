@@ -63,14 +63,6 @@ jobs:
         git clone https://gitlab.com/OrangeFox/misc/scripts.git -b master
         cd scripts
         sudo bash setup/android_build_env.sh
-
-    - name: Cache OrangeFox Source
-      uses: actions/cache@v3
-      with:
-        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-        key: ${{ runner.os }}-orangefox-${{ inputs.MANIFEST_BRANCH }}-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-orangefox-${{ inputs.MANIFEST_BRANCH }}-
       
     - name: Set-up Manifest
       if: inputs.MANIFEST_BRANCH == '11.0' || inputs.MANIFEST_BRANCH == '12.1'
@@ -101,53 +93,38 @@ jobs:
 
     - name: DEBUG - List output files
       run: |
-        echo "=== Listing out/target/product/${{ inputs.DEVICE_NAME }} ==="
-        ls -la OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/ || true
+        echo "=== Output folder contents ==="
+        ls -la OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/ || echo "Folder not found!"
         echo ""
-        echo "=== Looking for any .img / .zip files ==="
-        find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -name "*.img" -o -name "*.zip" || true
+        echo "=== Any .img files? ==="
+        find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -name "*.img" -type f || echo "No .img found"
         echo ""
-        echo "=== Full file list (first 30) ==="
-        find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -type f | head -30 || true
-
-    - name: Copy Recovery Files
-      run: |
-        cd ${GITHUB_WORKSPACE}
-        # Copy whatever OrangeFox actually produced
-        cp OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox-*.img . 2>/dev/null || echo "No OrangeFox-*.img found"
-        cp OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox-*.zip . 2>/dev/null || echo "No OrangeFox-*.zip found"
-        # Also try generic names just in case
-        cp OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.img . 2>/dev/null || echo "No *.img found"
-        cp OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip . 2>/dev/null || echo "No *.zip found"
-        
-        echo ""
-        echo "=== Files now in workspace root ==="
-        ls -la *.img *.zip 2>/dev/null || echo "No img/zip found in root"
+        echo "=== Any .zip files? ==="
+        find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -name "*.zip" -type f || echo "No .zip found"
 
     - name: Set Release Properties
       run: |
         echo "BUILD_DATE=$(TZ=Asia/Manila date +%Y%m%d)" >> $GITHUB_ENV
+        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
         DEVICE_TREE_URL="${{ inputs.DEVICE_TREE }}"
         if [[ "${DEVICE_TREE_URL}" == *.git ]]; then
           DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
         fi
         echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
 
-    - name: Upload Artifact
+    - name: Upload Artifact (Full Output Folder)
       uses: actions/upload-artifact@v4
       with:
         name: OrangeFox-${{ inputs.DEVICE_NAME }}
-        path: |
-          ./*.img
-          ./*.zip
+        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/
         if-no-files-found: error
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          ./*.img
-          ./*.zip
+          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.img
+          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
         name: OrangeFox Recovery for ${{ inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
