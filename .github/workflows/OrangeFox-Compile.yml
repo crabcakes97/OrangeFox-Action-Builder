@@ -102,6 +102,14 @@ jobs:
         echo "=== Any .zip files? ==="
         find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -name "*.zip" -type f || echo "No .zip found"
 
+    - name: Copy files to workspace root
+      run: |
+        cd OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}
+        cp *.img ${GITHUB_WORKSPACE}/ 2>/dev/null || echo "No .img found"
+        cp *.zip ${GITHUB_WORKSPACE}/ 2>/dev/null || echo "No .zip found"
+        echo "=== Files in workspace root ==="
+        ls -la ${GITHUB_WORKSPACE}/*.img ${GITHUB_WORKSPACE}/*.zip 2>/dev/null || echo "No files copied"
+
     - name: Set Release Properties
       run: |
         echo "BUILD_DATE=$(TZ=Asia/Manila date +%Y%m%d)" >> $GITHUB_ENV
@@ -112,19 +120,26 @@ jobs:
         fi
         echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
 
-    - name: Upload Artifact (Full Output Folder)
+    - name: Upload Artifact (IMG)
       uses: actions/upload-artifact@v4
       with:
-        name: OrangeFox-${{ inputs.DEVICE_NAME }}
-        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/
+        name: OrangeFox-${{ inputs.DEVICE_NAME }}-img
+        path: ${{ github.workspace }}/*.img
+        if-no-files-found: error
+
+    - name: Upload Artifact (ZIP)
+      uses: actions/upload-artifact@v4
+      with:
+        name: OrangeFox-${{ inputs.DEVICE_NAME }}-zip
+        path: ${{ github.workspace }}/*.zip
         if-no-files-found: error
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.img
-          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
+          ${{ github.workspace }}/*.img
+          ${{ github.workspace }}/*.zip
         name: OrangeFox Recovery for ${{ inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
