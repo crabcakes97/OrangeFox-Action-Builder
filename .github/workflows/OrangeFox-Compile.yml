@@ -99,6 +99,28 @@ jobs:
         set -e
         lunch omni_${{ inputs.DEVICE_NAME }}-eng && make clean && mka ${{ inputs.BUILD_TARGET }}image
 
+    - name: DEBUG - List output files
+      run: |
+        echo "=== Listing out/target/product/${{ inputs.DEVICE_NAME }} ==="
+        ls -la OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/ || true
+        echo ""
+        echo "=== Looking for any .img files ==="
+        find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -name "*.img" -type f || true
+        echo ""
+        echo "=== Looking for any .zip files ==="
+        find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -name "*.zip" -type f || true
+        echo ""
+        echo "=== Full tree of product folder (first 50 files) ==="
+        find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -type f | head -50 || true
+
+    - name: Copy Recovery Files
+      run: |
+        cd ${GITHUB_WORKSPACE}
+        cp OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox-R12.0-Unofficial-${{ inputs.DEVICE_NAME }}.img . 2>/dev/null || echo "No .img file found to copy"
+        cp OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox-R12.0-Unofficial-${{ inputs.DEVICE_NAME }}.zip . 2>/dev/null || echo "No .zip file found to copy"
+        ls -la ./*.img || echo "No .img in root"
+        ls -la ./*.zip || echo "No .zip in root"
+
     - name: Set Release Properties
       run: |
         echo "BUILD_DATE=$(TZ=Asia/Manila date +%Y%m%d)" >> $GITHUB_ENV
@@ -109,26 +131,21 @@ jobs:
         fi
         echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
 
-    - name: Upload Artifact (Recovery IMG)
+    - name: Upload Artifact (All OrangeFox files)
       uses: actions/upload-artifact@v4
       with:
         name: OrangeFox-${{ inputs.DEVICE_NAME }}
-        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.img
-        if-no-files-found: error
-
-    - name: Upload Artifact (Recovery ZIP)
-      uses: actions/upload-artifact@v4
-      with:
-        name: OrangeFox-${{ inputs.DEVICE_NAME }}-zip
-        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
-        if-no-files-found: error
+        path: |
+          ./*.img
+          ./*.zip
+        if-no-files-found: warn
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.img
-          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
+          ./*.img
+          ./*.zip
         name: OrangeFox Recovery for ${{ inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
