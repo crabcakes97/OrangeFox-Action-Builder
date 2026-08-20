@@ -68,9 +68,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-        key: ${{ runner.os }}-orangefox-${{ inputs.MANIFEST_BRANCH }}-${{ github.sha }}
+        key: \( {{ runner.os }}-orangefox- \){{ inputs.MANIFEST_BRANCH }}-${{ github.sha }}
         restore-keys: |
-          ${{ runner.os }}-orangefox-${{ inputs.MANIFEST_BRANCH }}-
+          \( {{ runner.os }}-orangefox- \){{ inputs.MANIFEST_BRANCH }}-
       
     - name: Set-up Manifest
       if: inputs.MANIFEST_BRANCH == '11.0' || inputs.MANIFEST_BRANCH == '12.1'
@@ -78,21 +78,21 @@ jobs:
         mkdir -p ${GITHUB_WORKSPACE}/OrangeFox
         cd ${GITHUB_WORKSPACE}/OrangeFox
         git config --global user.name "${{ github.actor }}"
-        git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+        git config --global user.email "\( {{ github.actor_id }}+ \){{ github.actor }}@users.noreply.github.com"
         git clone https://gitlab.com/OrangeFox/sync.git -b master
         cd sync
-        ./orangefox_sync.sh --branch ${{ inputs.MANIFEST_BRANCH }} --path ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+        ./orangefox_sync.sh --branch ${{ inputs.MANIFEST_BRANCH }} --path \( {GITHUB_WORKSPACE}/OrangeFox/fox_ \){{ inputs.MANIFEST_BRANCH }}
 
     - name: Clone Device Tree
       run: |
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-        git clone ${{ inputs.DEVICE_TREE }} -b ${{ inputs.DEVICE_TREE_BRANCH }} ./${{ inputs.DEVICE_PATH }}
+        cd \( {GITHUB_WORKSPACE}/OrangeFox/fox_ \){{ inputs.MANIFEST_BRANCH }}
+        git clone ${{ inputs.DEVICE_TREE }} -b \( {{ inputs.DEVICE_TREE_BRANCH }} ./ \){{ inputs.DEVICE_PATH }}
         cd ${{ inputs.DEVICE_PATH }}
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
     - name: Building OrangeFox
       run: |
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+        cd \( {GITHUB_WORKSPACE}/OrangeFox/fox_ \){{ inputs.MANIFEST_BRANCH }}
         set +e
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
@@ -102,43 +102,41 @@ jobs:
     - name: DEBUG - List output files
       run: |
         echo "=== Listing out/target/product/${{ inputs.DEVICE_NAME }} ==="
-        ls -la OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/ || true
+        ls -la OrangeFox/fox_\( {{ inputs.MANIFEST_BRANCH }}/out/target/product/ \){{ inputs.DEVICE_NAME }}/ || true
         echo ""
-        echo "=== Looking for any .img files ==="
-        find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -name "*.img" -type f || true
-        echo ""
-        echo "=== Looking for any .zip files ==="
-        find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -name "*.zip" -type f || true
-        echo ""
-        echo "=== Full tree of product folder (first 50 files) ==="
-        find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -type f | head -50 || true
+        echo "=== Looking for any .img / .zip files ==="
+        find OrangeFox/fox_\( {{ inputs.MANIFEST_BRANCH }}/out/target/product/ \){{ inputs.DEVICE_NAME }} -name "*.img" -o -name "*.zip" || true
 
     - name: Copy Recovery Files
       run: |
         cd ${GITHUB_WORKSPACE}
-        cp OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox-R12.0-Unofficial-${{ inputs.DEVICE_NAME }}.img . 2>/dev/null || echo "No .img file found to copy"
-        cp OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox-R12.0-Unofficial-${{ inputs.DEVICE_NAME }}.zip . 2>/dev/null || echo "No .zip file found to copy"
-        ls -la ./*.img || echo "No .img in root"
-        ls -la ./*.zip || echo "No .zip in root"
+        # Copy whatever OrangeFox actually produced
+        cp OrangeFox/fox_\( {{ inputs.MANIFEST_BRANCH }}/out/target/product/ \){{ inputs.DEVICE_NAME }}/OrangeFox-*.img . 2>/dev/null || true
+        cp OrangeFox/fox_\( {{ inputs.MANIFEST_BRANCH }}/out/target/product/ \){{ inputs.DEVICE_NAME }}/OrangeFox-*.zip . 2>/dev/null || true
+        # Also try generic names just in case
+        cp OrangeFox/fox_\( {{ inputs.MANIFEST_BRANCH }}/out/target/product/ \){{ inputs.DEVICE_NAME }}/*.img . 2>/dev/null || true
+        cp OrangeFox/fox_\( {{ inputs.MANIFEST_BRANCH }}/out/target/product/ \){{ inputs.DEVICE_NAME }}/*.zip . 2>/dev/null || true
+        
+        echo "=== Files now in workspace root ==="
+        ls -la *.img *.zip 2>/dev/null || echo "No img/zip found in root"
 
     - name: Set Release Properties
       run: |
         echo "BUILD_DATE=$(TZ=Asia/Manila date +%Y%m%d)" >> $GITHUB_ENV
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
         DEVICE_TREE_URL="${{ inputs.DEVICE_TREE }}"
         if [[ "${DEVICE_TREE_URL}" == *.git ]]; then
           DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
         fi
         echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
 
-    - name: Upload Artifact (All OrangeFox files)
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: OrangeFox-${{ inputs.DEVICE_NAME }}
         path: |
           ./*.img
           ./*.zip
-        if-no-files-found: warn
+        if-no-files-found: error
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v2
@@ -151,5 +149,5 @@ jobs:
         body: |
           ## OrangeFox Recovery Build - Unofficial
           Build: fox_${{ inputs.MANIFEST_BRANCH }}
-          Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ inputs.DEVICE_TREE_BRANCH }})
-          Commit: Most recent [commit](${{ env.DEVICE_TREE_URL }}/commit/${{ env.COMMIT_ID }}) during building.
+          Device: [Device Tree/Branch](\( {{ env.DEVICE_TREE_URL }}/tree/ \){{ inputs.DEVICE_TREE_BRANCH }})
+          Commit: Most recent [commit](\( {{ env.DEVICE_TREE_URL }}/commit/ \){{ env.COMMIT_ID }}) during building.
