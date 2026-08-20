@@ -1,11 +1,5 @@
 name: OrangeFox - Build
 
-# Credits to:
-# https://github.com/TeamWin
-# https://gitlab.com/OrangeFox
-# https://github.com/azwhikaru for Recovery Builder Template
-# And all Contributors in every repositories I used
-
 on:
   workflow_dispatch:
     inputs:
@@ -108,18 +102,22 @@ jobs:
         fi
         echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
 
-        # Determine actual image filename based on build target
-        if [ "${{ inputs.BUILD_TARGET }}" == "vendorboot" ]; then
-          echo "IMAGE_FILE=vendor_boot.img" >> $GITHUB_ENV
-        else
-          echo "IMAGE_FILE=${{ inputs.BUILD_TARGET }}.img" >> $GITHUB_ENV
-        fi
+        # OrangeFox outputs this specific naming pattern
+        echo "IMAGE_FILE=OrangeFox-R12.0-Unofficial-${{ inputs.DEVICE_NAME }}.img" >> $GITHUB_ENV
+        echo "ZIP_FILE=OrangeFox-R12.0-Unofficial-${{ inputs.DEVICE_NAME }}.zip" >> $GITHUB_ENV
 
-    - name: Upload Artifact
+    - name: Upload Artifact (Recovery IMG)
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.BUILD_TARGET }}-${{ inputs.DEVICE_NAME }}
+        name: OrangeFox-${{ inputs.DEVICE_NAME }}
         path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/${{ env.IMAGE_FILE }}
+        if-no-files-found: error
+
+    - name: Upload Artifact (Recovery ZIP)
+      uses: actions/upload-artifact@v4
+      with:
+        name: OrangeFox-${{ inputs.DEVICE_NAME }}-zip
+        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/${{ env.ZIP_FILE }}
         if-no-files-found: error
 
     - name: Upload to Release
@@ -127,6 +125,7 @@ jobs:
       with:
         files: |
           OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/${{ env.IMAGE_FILE }}
+          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/${{ env.ZIP_FILE }}
         name: OrangeFox Recovery for ${{ inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
