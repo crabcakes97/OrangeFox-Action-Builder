@@ -105,22 +105,22 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: OrangeFox-${{ inputs.DEVICE_NAME }}
-        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox-R12.0-Unofficial-${{ inputs.DEVICE_NAME }}.img
+        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.img
         if-no-files-found: error
 
     - name: Upload Artifact (Recovery ZIP)
       uses: actions/upload-artifact@v4
       with:
         name: OrangeFox-${{ inputs.DEVICE_NAME }}-zip
-        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox-R12.0-Unofficial-${{ inputs.DEVICE_NAME }}.zip
+        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
         if-no-files-found: error
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox-R12.0-Unofficial-${{ inputs.DEVICE_NAME }}.img
-          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox-R12.0-Unofficial-${{ inputs.DEVICE_NAME }}.zip
+          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.img
+          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
         name: OrangeFox Recovery for ${{ inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
