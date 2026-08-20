@@ -63,6 +63,14 @@ jobs:
         git clone https://gitlab.com/OrangeFox/misc/scripts.git -b master
         cd scripts
         sudo bash setup/android_build_env.sh
+
+    - name: Cache OrangeFox Source
+      uses: actions/cache@v3
+      with:
+        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+        key: ${{ runner.os }}-orangefox-${{ inputs.MANIFEST_BRANCH }}-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-orangefox-${{ inputs.MANIFEST_BRANCH }}-
       
     - name: Set-up Manifest
       if: inputs.MANIFEST_BRANCH == '11.0' || inputs.MANIFEST_BRANCH == '12.1'
