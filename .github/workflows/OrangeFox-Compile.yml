@@ -91,7 +91,7 @@ jobs:
         set -e
         lunch omni_${{ inputs.DEVICE_NAME }}-eng && make clean && mka ${{ inputs.BUILD_TARGET }}image
 
-    - name: DEBUG - List output files after build
+    - name: DEBUG - List output files
       run: |
         echo "=== Output folder contents ==="
         ls -la OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/ || echo "Folder not found!"
@@ -101,59 +101,6 @@ jobs:
         echo ""
         echo "=== Any .zip files? ==="
         find OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }} -name "*.zip" -type f || echo "No .zip found"
-
-    - name: Manually pack recovery image (if missing)
-      run: |
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-        OUTPUT_DIR=out/target/product/${{ inputs.DEVICE_NAME }}
-        RAMDISK_FILE=""
-        # Find the ramdisk file
-        if [ -f ${OUTPUT_DIR}/ramdisk-recovery.img ]; then
-          RAMDISK_FILE=${OUTPUT_DIR}/ramdisk-recovery.img
-        elif [ -f ${OUTPUT_DIR}/recovery/ramdisk-recovery.img ]; then
-          RAMDISK_FILE=${OUTPUT_DIR}/recovery/ramdisk-recovery.img
-        elif [ -f ${OUTPUT_DIR}/root/init.rc ]; then
-          # Repack root folder into ramdisk
-          cd ${OUTPUT_DIR}
-          find root | cpio -o -H newc | gzip > ramdisk-recovery.img
-          cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-          RAMDISK_FILE=${OUTPUT_DIR}/ramdisk-recovery.img
-        else
-          echo "No ramdisk found!"
-          exit 1
-        fi
-
-        # Check kernel and dtb
-        KERNEL=device/${{ inputs.DEVICE_PATH }}/prebuilt/zImage
-        DTB=device/${{ inputs.DEVICE_PATH }}/prebuilt/dtb.img
-        if [ ! -f $KERNEL ]; then
-          echo "Kernel not found: $KERNEL"
-          exit 1
-        fi
-        if [ ! -f $DTB ]; then
-          echo "DTB not found: $DTB"
-          # Try to continue without DTB
-          DTB=""
-        fi
-
-        # Pack the image
-        OUTPUT_IMG=${OUTPUT_DIR}/OrangeFox-R12.0-Unofficial-${{ inputs.DEVICE_NAME }}.img
-        mkbootimg \
-          --kernel $KERNEL \
-          --ramdisk $RAMDISK_FILE \
-          ${DTB:+--dtb $DTB} \
-          --header_version 4 \
-          --os_version 13.0.0 \
-          --os_patch_level 2026-06 \
-          --output $OUTPUT_IMG
-
-        if [ -f $OUTPUT_IMG ]; then
-          echo "Successfully packed: $OUTPUT_IMG"
-          ls -la $OUTPUT_IMG
-        else
-          echo "Failed to pack image!"
-          exit 1
-        fi
 
     - name: Set Release Properties
       run: |
