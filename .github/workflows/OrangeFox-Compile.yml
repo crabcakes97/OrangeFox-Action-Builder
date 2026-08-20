@@ -20,19 +20,19 @@ on:
       DEVICE_TREE:
         description: 'OrangeFox Device Tree'
         required: true
-        default: 'https://github.com/cd-Crypton/custom_recovery_tree_realme_nashc'
+        default: 'https://github.com/crabcakes97/android_device_motorola_nevada'
       DEVICE_TREE_BRANCH:
         description: 'OrangeFox Device Tree Branch'
         required: true
-        default: 'android-12.1'
+        default: 'main'
       DEVICE_PATH:
         description: 'Specify your Device Path'
         required: true
-        default: 'device/realme/nashc'
+        default: 'device/motorola/nevada'
       DEVICE_NAME:
         description: 'Specify your Device Codename'
         required: true
-        default: 'nashc'
+        default: 'nevada'
       BUILD_TARGET:
         description: 'Specify your Build Target'
         required: true
@@ -95,7 +95,7 @@ jobs:
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         set -e
-        lunch omni_${{ inputs.DEVICE_NAME }}-eng && make clean && mka vendorbootimage
+        lunch omni_${{ inputs.DEVICE_NAME }}-eng && make clean && mka ${{ inputs.BUILD_TARGET }}image
 
     - name: Set Release Properties
       run: |
@@ -108,18 +108,25 @@ jobs:
         fi
         echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
 
-    - name: Upload Artifact (vendor_boot.img)
+        # Determine actual image filename based on build target
+        if [ "${{ inputs.BUILD_TARGET }}" == "vendorboot" ]; then
+          echo "IMAGE_FILE=vendor_boot.img" >> $GITHUB_ENV
+        else
+          echo "IMAGE_FILE=${{ inputs.BUILD_TARGET }}.img" >> $GITHUB_ENV
+        fi
+
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: vendor_boot-${{ inputs.DEVICE_NAME }}
-        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/vendor_boot.img
+        name: ${{ inputs.BUILD_TARGET }}-${{ inputs.DEVICE_NAME }}
+        path: OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/${{ env.IMAGE_FILE }}
         if-no-files-found: error
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/vendor_boot.img
+          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/${{ env.IMAGE_FILE }}
         name: OrangeFox Recovery for ${{ inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
